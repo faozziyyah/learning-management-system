@@ -1,0 +1,138 @@
+from flask import Flask, jsonify
+from flask_restx import Api, Resource, fields
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+import os
+from datetime import datetime
+
+app=Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:OPEyemi2001@localhost/lms'
+app.config['SQLALCHEMY_ECHO']=True
+app.config['SECRET_KEY'] = "secret"
+
+UPLOAD_FOLDER = 'static/images/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+api=Api(app)
+
+db=SQLAlchemy(app)
+
+Migrate(app, db)
+
+class User(db.Model ):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer(), primary_key=True)
+    identifier = db.Column(db.String(50), unique=True , nullable=False )
+    email =  db.Column( db.String(100) , nullable=False , unique=True )
+    first_name = db.Column(db.String(100), nullable=False )
+    last_name = db.Column(db.String(100), nullable=False )
+    password_hash = db.Column(db.String(64) , nullable=False )
+    password_reset_token = db.Column(db.String(64) , nullable=True )
+    created_at = db.Column(db.DateTime() , nullable=False , default=datetime.utcnow)
+    user_type = db.Column(db.String(10))
+
+    @classmethod
+    def get_by_id(cls, id):
+        return cls.query.get_or_404(id)
+
+    def __repr__(self) -> str:
+        return self.email
+
+class Admin(User):
+    __tablename__ = 'admin'
+
+    id = db.Column(db.Integer, db.ForeignKey('users'), primary_key=True)
+    designation = db.Column(db.String(255) , nullable=True  )
+    rc_number = db.Column(db.Integer, nullable=False)
+    school_mail =  db.Column( db.String(100) , nullable=False , unique=True )
+    is_superadmin = db.Column( db.Boolean , default=False)
+
+
+class Student(db.Model):
+
+    __tablename__ = "students"
+
+    id = db.Column(db.Integer, primary_key=True)
+    admission_no = db.Column(db.String(20))
+    name = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)
+    courses = db.relationship('Course', backref='student_course', lazy='dynamic')
+    score = db.relationship('Score', backref='teacher_score', lazy='dynamic')
+
+class Teacher(db.Model):
+
+    __tablename__ = "teachers"
+
+    id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    employee_no = db.Column(db.String(20))
+    courses = db.relationship('Course', backref='teacher_course', lazy='dynamic')
+
+class Grade(db.Model):
+
+    __tablename__ = "grades"
+
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("courses.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    score = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
+
+class Course(db.Model):
+
+    __tablename__ = "courses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False, unique=True)
+    teacher = db.Column(db.String(50), nullable=False, unique=True)
+    students = db.relationship('Student', backref='student', lazy='dynamic')
+    created_at = db.Column(db.DateTime(), nullable=False, default=datetime.now)
+
+    def __repr__(self):
+        return '<Name %r>' % self.name
+
+student_model = api.model(
+    'Student',
+    {
+        'id': fields.Integer(),
+        'admission_no': fields.String(),
+        'name': fields.String(),
+        'email': fields.String(),
+    }
+)
+
+
+@api.route('/students')
+class Students(Resource):
+
+    @api.marshall_list_with(student_model,code=200,envelope="students")
+
+    def get(self):
+        students=Student.query.all()
+
+        return students
+
+    def post(self):
+        pass
+
+@api.route('/students<int:id>')
+class StudentDetail(Resource):
+    def get(self,id):
+        pass
+
+    def put(self, id):
+        pass
+
+    def delete(self, id):
+        pass
+
+@app.shell_context_processor
+def make_shell_context():
+    return {
+        'db':db,
+        'Student': Student
+    }
+
+if __name__ == '__main__':
+    app.run(debug=True)
