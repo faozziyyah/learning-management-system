@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import (create_access_token, create_refresh_token, jwt_required, get_jwt_identity)
+from flask_jwt_extended import (create_access_token, create_refresh_token, jwt_required, get_jwt_identity, current_user)
 from ..models.students import Student
+from ..models.admin import Admin
 from ..models.users import User
 from http import HTTPStatus
 from ..utils import db
@@ -14,6 +15,37 @@ student_model=student_namespace.model(
     'name':fields.String(required=True, description="username"),
     'email':fields.String(required=True, description="name"),
     'course':fields.String(required=True, description="Course"),
+    'score':fields.Integer(description='score'),
+    }
+)
+
+student_records_model=student_namespace.model(
+    'Student records', {
+    'id':fields.Integer(description='ID'),
+    'admission_no':fields.Integer(description='Admission Number'),
+    'name':fields.String(required=True, description="username"),
+    'email':fields.String(required=True, description="name"),
+    'score':fields.Integer(description='score'),
+    }
+)
+
+student_course_model=student_namespace.model(
+    'Student records', {
+    'id':fields.Integer(description='ID'),
+    'admission_no':fields.Integer(description='Admission Number'),
+    'name':fields.String(required=True, description="username"),
+    'email':fields.String(required=True, description="name"),
+    'score':fields.Integer(description='score'),      
+    "teacher": fields.String(description="Teacher Full Name"),
+    }
+)
+
+student_grade_model=student_namespace.model(
+    'Student records', {
+    'id':fields.Integer(description='ID'),
+    'admission_no':fields.Integer(description='Admission Number'),
+    'name':fields.String(required=True, description="username"),
+    'email':fields.String(required=True, description="name"),
     'score':fields.Integer(description='score'),
     }
 )
@@ -116,14 +148,22 @@ class GetUpdateDelete(Resource):
 
         return student_to_delete, HTTPStatus.ok
     
-@student_namespace.route('/user/<int:user_id>/student/<int:student_id>/')
+@student_namespace.route('/courses/student/')
+@student_namespace.marshal_with(student_course_model)
+@student_namespace.doc(
+    description="Retrieve a student course"
+)
+@jwt_required()
 class GetStudentScore(Resource):
 
-    def get(self,user_id,student_id):
+    def get(self,student_id):
         """
            Retrieve a student's score
         """
-        pass
+        if current_user.type == "student":
+            student = Student.query.filter_by(username=current_user.username).first()
+            student_courses = student.courses
+            return student_courses, HTTPStatus.OK
     
 @student_namespace.route('/student/status/<int:student_id>')
 class UpdateStudentStatus(Resource):
