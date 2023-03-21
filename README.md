@@ -37,7 +37,7 @@ It is a simple API that allows you if you are an Admin to perform CRUD operation
 ### Links
 
 - Solution URL: (https://github.com/faozziyyah/learning-management-systemp)
-- Live link: (not yet available)
+- Live link: (https://faozziyyah.pythonanywhere.com/)
 
 ## To use
 - To run the application, run `python3 runserver.py`
